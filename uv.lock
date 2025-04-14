@@ -4,7 +4,7 @@ requires-python = ">=3.13"
 
 [[package]]
 name = "aivk"
-version = "0.3.2.6"
+version = "0.3.2.7"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -15,9 +15,9 @@ dependencies = [
     { name = "requests" },
     { name = "toml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dc/93/1e10f24001dc7881d2f1dff5eb5938c196cdc47bf0e03dbcdf113ef13f06/aivk-0.3.2.6.tar.gz", hash = "sha256:19e69ee49272463077dc148bc878d1c473ad35309f46f26c939c2d3e564de62b", size = 17103 }
+sdist = { url = "https://files.pythonhosted.org/packages/29/5c/7291ae7a1f7779fc0086dc39c8b395978d5b46ffe9eba3b226edd54ab703/aivk-0.3.2.7.tar.gz", hash = "sha256:e814d75daf54ac8ad5dca5c5b26de339564052671e4a277fa0321c9431e117f2", size = 17108 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a5/46/23d42ebaefdef793a0d7f6d85e427ce34957b1028e71b4d602f34e94e044/aivk-0.3.2.6-py3-none-any.whl", hash = "sha256:874e02fb1f180741ed829c7563ad1e2bae1b18e64fd3d0d0c4a0980af758f3ac", size = 21585 },
+    { url = "https://files.pythonhosted.org/packages/bd/30/60d27e4adc39fe5f27e3a0749f0c9e899db5de7d31eadd49fb9068e87035/aivk-0.3.2.7-py3-none-any.whl", hash = "sha256:53a0ec63227c99a371b83319515df91025b3ced734f1a44e69779adfa9a7dd98", size = 21609 },
 ]
 
 [[package]]
@@ -29,14 +29,16 @@ dependencies = [
     { name = "click" },
     { name = "httpx" },
     { name = "mcp", extra = ["cli"] },
+    { name = "tqdm" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "aivk", specifier = ">=0.3.2.6" },
+    { name = "aivk", specifier = ">=0.3.2.7" },
     { name = "click", specifier = ">=8.1.8" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "mcp", extras = ["cli"], specifier = ">=1.6.0" },
+    { name = "tqdm", specifier = ">=4.67.1" },
 ]
 
 [[package]]
@@ -380,6 +382,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/be/ba/1f744cdc819428fc6b5084ec34d9b30660f6f9daaf70eead706e3203ec3c/toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f", size = 22253 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/44/6f/7120676b6d73228c96e17f1f794d8ab046fc910d781c8d151120c3f1569e/toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b", size = 16588 },
+]
+
+[[package]]
+name = "tqdm"
+version = "4.67.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2", size = 78540 },
 ]
 
 [[package]]

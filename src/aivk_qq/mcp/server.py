@@ -13,10 +13,6 @@ import locale
 from mcp.server.fastmcp import FastMCP
 from aivk.api import AivkIO
 
-try:
-    from ..base.utils import setup_napcat
-except ImportError:
-    from aivk_qq.base.utils import setup_napcat
 
 from mcp import types
 
@@ -50,11 +46,6 @@ AivkIO.add_module_id("qq")
 AivkIO.add_module_id("qq_mcp")
 AivkIO.save_config("qq", aivk_qq_config)
 
-bot = setup_napcat()
-
-
-bot.run_none_blocking()
-
 
 @mcp.tool(name="ping", description="Ping the server")
 def ping():
@@ -64,21 +55,9 @@ def ping():
     return "pong"
 
 
-@mcp.tool(name="send_private_message", description="Send a private message")
-def send_private_message(uid: int, message: str) -> str:
-    """
-    Send a private message to a user
-    uid : User ID (QQ号)
-    """
-    logger.info(f"Send private message to {uid}: {message}")
-
-    BotAPI.post_private_msg_sync(
-        user_id=uid,
-        message=message,
-    )
 
 
 
 if __name__ == "__main__":
-    bot.run_none_blocking()
+
     mcp.run(transport=transport)
