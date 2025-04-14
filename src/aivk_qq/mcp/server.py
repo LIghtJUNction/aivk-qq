@@ -7,19 +7,27 @@
 # date: 2025-04-14
 
 import logging
-import os
+
 from pathlib import Path
+import locale
 from mcp.server.fastmcp import FastMCP
 from aivk.api import AivkIO
-from typing import Dict, Any, List, Optional
+
 try:
     from ..base.utils import setup_napcat
 except ImportError:
     from aivk_qq.base.utils import setup_napcat
 
-from ncatbot.core import GroupMessage, PrivateMessage
-
 from mcp import types
+
+# 配置日志格式，使用适当的编码设置避免中文乱码
+# 获取当前系统编码
+system_encoding = locale.getpreferredencoding()
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] %(levelname)s - %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 logger = logging.getLogger("aivk.qq.mcp")
 
@@ -27,6 +35,11 @@ aivk_qq_config = AivkIO.get_config("qq")
 port = aivk_qq_config.get("port", 10141)
 host = aivk_qq_config.get("host", "localhost")
 transport = aivk_qq_config.get("transport", "stdio")
+
+# 使用logger输出当前配置信息
+logger.info(f"当前MCP服务器传输协议为: {transport}")
+logger.info(f"当前配置: {aivk_qq_config}")
+logger.info("服务已启动")
 
 mcp = FastMCP(name="aivk_qq", instructions="AIVK QQ MCP Server" , port=port, host=host, debug=True)
 
@@ -39,6 +52,10 @@ AivkIO.save_config("qq", aivk_qq_config)
 
 bot = setup_napcat()
 
+
+bot.run_none_blocking()
+
+
 @mcp.tool(name="ping", description="Ping the server")
 def ping():
     """
@@ -46,36 +63,22 @@ def ping():
     """
     return "pong"
 
-async def on_group_message(msg: GroupMessage):
+
+@mcp.tool(name="send_private_message", description="Send a private message")
+def send_private_message(uid: int, message: str) -> str:
     """
-    Group message handler
+    Send a private message to a user
+    uid : User ID (QQ号)
     """
+    logger.info(f"Send private message to {uid}: {message}")
 
-    logger.info(f"Group message: {msg}")
-    if msg.raw_message == "测试":
-        await msg.reply(text="NcatBot 测试成功喵~")
-    # 处理群消息
-    return msg
+    BotAPI.post_private_msg_sync(
+        user_id=uid,
+        message=message,
+    )
 
 
-async def on_private_message(msg: PrivateMessage):
-    """
-    Private message handler
-    """
 
-    logger.info(f"Private message: {msg}")
-
-    @mcp.resource("qq://test")
-    def test():
-        return "This is a test response."
-
-    if msg.raw_message == "测试":
-        await msg.reply(text="NcatBot 测试成功喵~")
-    # 处理私聊消息
-    return msg
-
-bot.run()
 if __name__ == "__main__":
-    
+    bot.run_none_blocking()
     mcp.run(transport=transport)
-    

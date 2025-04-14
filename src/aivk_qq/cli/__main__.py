@@ -1,10 +1,8 @@
 from pathlib import Path
-import shutil
 import sys
 import click
 from aivk.api import AivkIO
 
-from ..base.utils import setup_napcat
 import logging
 
 logger = logging.getLogger("aivk.qq.cli")
@@ -38,32 +36,10 @@ def config(path, bot_uid, root):
     click.echo("配置已保存")
     AivkIO.add_module_id("qq")
 
-@cli.command()
-@click.option("--force", "-f", is_flag=True, help="强制重新安装napcat")
-def init(force):
-    """
-    初次运行时执行的初始化操作
-    下载napcat程序
-    登录QQ账号
-    """
-    aivk_qq_config = AivkIO.get_config("qq")
-    if not aivk_qq_config.get("bot_uid", None):
-        click.echo("请先设置受控机器人的QQ号")
-        sys.exit(1)
-    if not aivk_qq_config.get("root", None):
-        click.echo("请先设置超级管理员QQ号")
-        sys.exit(1)
-    
-    ncat_dir : Path = AivkIO.get_aivk_root() / "data" / "qq" / "napcat"
-    logger.info(f"QQ 数据目录: {ncat_dir}")
 
-    if force:
-        click.echo("强制重新安装napcat")
-        shutil.rmtree(ncat_dir, ignore_errors=True)
 
-    bot = setup_napcat()
-    bot.run()
-    logger.info("NcatBot 服务启动完毕")
+
+
     
 @cli.command()
 @click.option("--port", "-p", help="MCP服务器端口")

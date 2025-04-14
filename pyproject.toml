@@ -12,7 +12,6 @@ dependencies = [
     "click>=8.1.8",
     "httpx>=0.28.1",
     "mcp[cli]>=1.6.0",
-    "ncatbot>=3.7.6.post2",
 ]
 
 [project.scripts]
