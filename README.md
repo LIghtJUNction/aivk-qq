@@ -42,7 +42,6 @@ loacalhost:10141/sse/
 
 本项目基于以下开源项目：
 
-- [ncatbot](https://github.com/liyihao1110/ncatbot) - 提供 QQ 机器人客户端实现
 - [AIVK](https://github.com/LIghtJUNction/aivk) - AI虚拟内核框架
 - [MCP](https://github.com/modelcontextprotocol/python-sdk) - Model Context Protocol
 
