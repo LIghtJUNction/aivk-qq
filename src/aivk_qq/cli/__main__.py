@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import os
 from pathlib import Path
 import shutil
 import sys
@@ -296,8 +295,10 @@ def nc(path):
         click.secho("❌ 不支持的操作系统", fg="bright_red", bold=True)
         sys.exit(1)
 
-    asyncio.run(AivkExecuter.aexec(command=command, shell=True , cwd=str(napcat_root / "napcat"), env=os.environ.copy()))
+    asyncio.run(AivkExecuter.aexec(command=command, shell=True , cwd=napcat_root))
   
+
+
 
 
     click.secho("✅ Napcat.Shell 启动成功", fg="bright_green")

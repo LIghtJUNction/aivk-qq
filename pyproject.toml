@@ -1,7 +1,7 @@
 [project]
 name = "aivk_qq"
-version = "0.1.0"
-description = "Add your description here"
+version = "0.1."
+description = "AIVK-QQ：一个强大的QQ机器人框架，集成MCP服务器、CLI工具、Napcat.Shell启动器和Napcat API SDK于一体，为AI驱动的QQ交互提供全方位支持"
 readme = "README.md"
 authors = [
     { name = "LIghtJUNction", email = "lightjunction.me@gmail.com" }
