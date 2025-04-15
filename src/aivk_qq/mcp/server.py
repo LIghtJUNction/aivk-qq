@@ -8,13 +8,11 @@
 
 import logging
 
-from pathlib import Path
 import locale
 from mcp.server.fastmcp import FastMCP
 from aivk.api import AivkIO
 
 
-from mcp import types
 
 # 配置日志格式，使用适当的编码设置避免中文乱码
 # 获取当前系统编码

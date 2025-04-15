@@ -33,6 +33,9 @@ uv tool install aivk_qq
 ### 配置AIVK环境
 
 设置AIVK根目录（以下三种方式任选其一）：
+aivk-qq help <command>
+
+```bash
 
 1. 通过命令行指定：
    ```bash
