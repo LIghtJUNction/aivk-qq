@@ -24,11 +24,33 @@
 
 ### 安装
 
-使用 uv 包管理器安装：
+首先安装 uv 包管理器（如果尚未安装）：
+
+```bash
+pip install uv
+```
+
+然后安装项目依赖：
 
 ```bash
 uv tool install aivk_qq
+uv pip install -r requirements.txt
 ```
+
+
+### 启动前准备
+
+注意！当前版本仅支持Windows ， 其他系统请联系我或提交PR进行适配！
+
+uv tool install aivk
+aivk init # 留空或目录
+
+aivk-qq init 
+aivk-qq config -b 受控机器人qq -r 超级管理qq -w 127.0.0.1 -wp 10143 # ws_client ip:port
+
+aivk-qq nc # 启动Napcat.Shell --shell powershell / pwsh / cmd
+
+aivk-qq help # 查看帮助 你可以测试ws_client能否正确连接
 
 ### 配置AIVK环境
 
