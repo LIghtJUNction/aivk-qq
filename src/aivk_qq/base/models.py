@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel
-
+from .enums import ActionType
 
 # 发送者信息模型
 class Sender(BaseModel):
@@ -89,3 +89,59 @@ class Message(BaseModel):
 # private_msg_data = json.loads(private_msg_json)
 # private_message = Message.from_json(private_msg_data)
 
+# region 发送 & 接收数据包类
+
+class WsPayload(BaseModel):
+    action : ActionType
+    params : dict
+    echo : str
+
+
+class WsResponse(BaseModel):
+    status : str
+    retcode : int
+    data : dict
+    echo : str
+
+
+class HttpPayload(BaseModel):
+    """OneBot HTTP API 请求参数基类"""
+    # 通用字段可以在这里定义
+    
+    class Config:
+        extra = "allow"  # 允许额外字段，这样不同API的特定参数可以正常传入
+
+class HttpResponse(BaseModel):
+    status : str
+    retcode : int
+    msg : Optional[str]
+    wording : Optional[str]
+    data : dict
+    echo : str
+
+# HTTP-SSE 事件订阅模型
+class SseConnection(BaseModel):
+    """HTTP-SSE 连接配置"""
+    endpoint: str = "/_events"  # SSE 事件订阅端点
+    heartbeat_interval: int = 30  # 心跳间隔（秒）
+    
+    class Config:
+        extra = "allow"
+
+# HTTP-SSE 事件数据模型
+class SseEvent(BaseModel):
+    """HTTP-SSE 事件数据"""
+    id: Optional[str] = None  # 事件ID
+    event: Optional[str] = None  # 事件类型
+    data: Dict[str, Any]  # 事件数据
+    retry: Optional[int] = None  # 重连延迟（毫秒）
+    
+    def format_sse(self) -> str:
+        """格式化为 SSE 事件格式"""
+        lines = []
+        if self.id is not None:
+            lines.append(f"id: {self.id}")
+        if self.event is not None:
+            lines.append(f"event: {self.event}")
+        if self.retry is not None:
+            lines.append(f"retry: {self.retry}")

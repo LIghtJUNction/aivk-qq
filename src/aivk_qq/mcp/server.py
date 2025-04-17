@@ -6,6 +6,12 @@
 # author: LIghtJUNction
 # date: 2025-04-14
 
+from logging import Logger
+
+
+from typing import Any
+
+
 import logging
 
 import locale
@@ -23,10 +29,10 @@ logging.basicConfig(
     datefmt='%Y-%m-%d %H:%M:%S'
 )
 
-logger = logging.getLogger("aivk.qq.mcp")
+logger: Logger = logging.getLogger("aivk.qq.mcp")
 
 aivk_qq_config = AivkIO.get_config("qq")
-port = aivk_qq_config.get("port", 10141)
+port: Any = aivk_qq_config.get("port", 10141)
 host = aivk_qq_config.get("host", "localhost")
 transport = aivk_qq_config.get("transport", "stdio")
 

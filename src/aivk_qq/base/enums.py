@@ -1,6 +1,7 @@
 from enum import Enum, IntEnum
 
 
+
 class PostType(str, Enum):
     """消息上报类型"""
     MESSAGE = "message"       # 消息事件
@@ -469,3 +470,5 @@ class EventCompatibility(Enum):
 #         "type": MessageSegmentType.AT,
 #         "data": {"qq": str(user_id)}
 #     }]
+
+

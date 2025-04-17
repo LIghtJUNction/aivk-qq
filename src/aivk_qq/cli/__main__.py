@@ -1,3 +1,4 @@
+# pyright: reportArgumentType=false,reportPrivateUsage=false,reportUnknownVariableType=false,reportUnknownParameterType=false,reportUnknownMemberType=false,reportMissingParameterType=false,reportUnusedCallResult=false
 # -*- coding: utf-8 -*-
 import asyncio
 import os
@@ -5,17 +6,21 @@ from pathlib import Path
 import shutil
 import sys
 import platform
+from aivk.__about__ import __version__ as __aivkversion__
 import click
 from aivk.api import AivkIO
 
-from ..napcat.api import NapcatAPI
+from ..napcat.installer import NapcatInstaller
 from ..__about__ import __version__, __author__
 from ..base.utils import _get_cmd
 
 import logging
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger("aivk.qq.cli")
-
 
 # region 工具函数
 
@@ -31,7 +36,20 @@ def _update_path(path):
     logger.debug(f"aivk_root_input: {path}")
     return False
 
+def _list_config(_config):
+    click.secho("\n📝 当前配置:", fg="bright_green")
 
+    # 以表格形式打印配置项
+    click.secho("-"*50, fg="bright_blue")
+    click.secho(f"{'参数':<20}{'值':<30}", fg="bright_blue")
+    click.secho("-"*50, fg="bright_blue")
+    for key, value in _config.items():
+        click.secho(f"{key:<20}", fg="bright_green", nl=False)
+        if value is None:
+            click.secho(f"{'未设置':<30}", fg="red")
+        else:
+            click.secho(f"{str(value):<30}", fg="yellow")
+    click.secho("-"*50, fg="bright_blue")
 
 
 
@@ -46,55 +64,56 @@ def cli():
 @click.option("--path","-p", help="Path to the AIVK ROOT directory")
 @click.option("--bot_uid", "-b", help="受控机器人的QQ号")
 @click.option("--root", "-r", help="超级管理员QQ号")
-@click.option("--websocket", "-w", help="ws 地址")
-@click.option("--websocket_port", "-wp", help="ws 端口")
-def config(path, bot_uid, root, websocket, websocket_port):
+def config(path, bot_uid, root):
     """
     设置基本配置
     :param path: Path to the AIVK ROOT directory
     :bot_uid: 受控机器人的QQ号
     :root : 超级管理员QQ号
-    :websocket: ws 地址
-    :websocket_port: ws 端口
     """
     click.echo("\n" + "="*50)
     click.secho("⚙️ AIVK-QQ 配置设置 ⚙️", fg="bright_cyan", bold=True)
     click.echo("="*50)
 
-    if path:
-        click.secho("📁 ", nl=False)
-        click.secho("设置AIVK根目录为: ", fg="bright_green", nl=False)
-        click.secho(f"{path}", fg="yellow")
-        path = Path(path).resolve()
-        AivkIO.set_aivk_root(path)
+    _update_path(path)
 
     aivk_qq_config = AivkIO.get_config("qq")
-    aivk_qq_config["bot_uid"] = bot_uid if bot_uid else aivk_qq_config.get("bot_uid", None)
-    aivk_qq_config["root"] = root if root else aivk_qq_config.get("root", None)
-    aivk_qq_config["websocket"] = websocket if websocket else aivk_qq_config.get("websocket", None)
-    aivk_qq_config["websocket_port"] = websocket_port if websocket_port else aivk_qq_config.get("websocket_port", None)
-    
-    
-    click.secho("\n📝 当前配置:", fg="bright_green")
-    
-    # 以表格形式打印配置项
-    click.secho("-"*50, fg="bright_blue")
-    click.secho(f"{'参数':<20}{'值':<30}", fg="bright_blue")
-    click.secho("-"*50, fg="bright_blue")
-    for key, value in aivk_qq_config.items():
-        click.secho(f"{key:<20}", fg="bright_green", nl=False)
-        if value is None:
-            click.secho(f"{'未设置':<30}", fg="red")
-        else:
-            click.secho(f"{str(value):<30}", fg="yellow")
-    click.secho("-"*50, fg="bright_blue")
-    
-    AivkIO.save_config("qq", aivk_qq_config)
-    
-    napcat_api = NapcatAPI(aivk_root=AivkIO.get_aivk_root(), bot_uid=bot_uid, root=root, websocket=websocket, websocket_port=websocket_port)
-    napcat_api.save_to_json()
 
+    if not shutil.which("uv"):
+        click.secho("⚠️ UV未安装", fg="bright_red")
+        if click.confirm("是否前往查看教程？", default=True, abort=False):
+            click.secho("CTRL+LMB: https://docs.astral.sh/uv 以获取更多信息。")
+
+    if aivk_qq_config.get("bot_uid", None) is None and bot_uid is None:
+        click.secho("⚠️ 受控机器人的QQ号未设置", fg="bright_red")
+        aivk_qq_config["bot_uid"] = click.prompt("请输入受控机器人的QQ号", type=int)
+
+    if aivk_qq_config.get("root", None) is None and root is None:
+        click.secho("⚠️ 超级管理员QQ号未设置", fg="bright_red")
+        aivk_qq_config["root"] = click.prompt("请输入超级管理员QQ号", type=int)
+    
+    if AivkIO.get_aivk_root().exists() and AivkIO.is_aivk_root():
+        click.secho("📁 ", nl=False)
+        click.secho("当前AIVK根目录为: ", fg="bright_green", nl=False)
+        click.secho(f"{AivkIO.get_aivk_root()}", fg="yellow")
+    else:
+        click.secho("请使用：aivk init <path/env:AIVK_ROOT/~/.aivk> 初始化AIVK根目录！", fg="bright_red")
+        if shutil.which("aivk"):
+            click.secho("请使用：aivk init <path/env:AIVK_ROOT/~/.aivk> 初始化AIVK根目录！", fg="bright_red")
+        else:
+            if click.confirm("是否下载AIVK？", default=True, abort=False):
+                from aivk.api import AivkExecuter
+                asyncio.run(AivkExecuter.aexec(cmd=["uv","tool","install","aivk"], shell=True, env=os.environ))
+            raise SystemExit(1)
+
+
+    click.secho("\n📝 当前配置:", fg="bright_green")
+    AivkIO.save_config("qq", aivk_qq_config)
     click.secho("\n✅ 配置已保存", fg="bright_green", bold=True)
+
+    _list_config(aivk_qq_config)
+
+    
     AivkIO.add_module_id("qq")
     
     click.echo("\n" + "="*50)
@@ -105,193 +124,86 @@ def config(path, bot_uid, root, websocket, websocket_port):
 @cli.command()
 @click.option("--path", "-p", help="Path to the AIVK ROOT directory")
 @click.option("--force", "-f", is_flag=True, help="强制初始化")
-@click.option("--bot_uid", "-b", help="受控机器人的QQ号")
-@click.option("--root", "-r", help="超级管理员QQ号")
-@click.option("--websocket", "-w", help="ws 地址")
-@click.option("--websocket_port", "-wp", help="ws 端口")
-def init(path, force, bot_uid, root, websocket, websocket_port): 
+def init(path, force ): 
     """
     初始化
     -f 强制重新下载napcat shell
     -p 指定AIVK根目录(可选)
     """
+    NapcatInstaller.update_proxy_list()
     click.echo("\n" + "="*50)
     click.secho("🚀 AIVK-QQ 初始化向导 🚀", fg="bright_cyan", bold=True)
     click.echo("="*50)
 
-    if path:
-        click.secho("📁 ", nl=False)
-        click.secho("设置AIVK根目录为: ", fg="bright_green", nl=False)
-        click.secho(f"{path}", fg="yellow")
-        path = Path(path).resolve()
-        AivkIO.set_aivk_root(path)
+    _update_path(path)
 
-    aivk_root = AivkIO.get_aivk_root()
     aivk_qq_config = AivkIO.get_config("qq")
-    qq_data_path = aivk_root / "data" / "qq"
-    napcat_root = qq_data_path / "napcat_root"
 
-    if force:
-        click.secho("🔄 强制初始化模式", fg="bright_red", bold=True)
-        click.secho("删除现有 Napcat.Shell...", fg="bright_yellow")
-        shutil.rmtree(napcat_root, ignore_errors=True)
-        click.secho("✅ 已清理旧文件", fg="bright_green")
-
-    # 更新配置
-    aivk_qq_config["bot_uid"] = bot_uid if bot_uid else aivk_qq_config.get("bot_uid", None)
-    aivk_qq_config["root"] = root if root else aivk_qq_config.get("root", None)
-    aivk_qq_config["websocket"] = websocket if websocket else aivk_qq_config.get("websocket", None)
-    aivk_qq_config["websocket_port"] = websocket_port if websocket_port else aivk_qq_config.get("websocket_port", None)
-
-    click.secho("\n📝 当前配置:", fg="bright_green")
-    
-    # 以表格形式打印配置项
-    click.secho("-"*50, fg="bright_blue")
-    click.secho(f"{'参数':<20}{'值':<30}", fg="bright_blue")
-    click.secho("-"*50, fg="bright_blue")
-    for key, value in aivk_qq_config.items():
-        click.secho(f"{key:<20}", fg="bright_green", nl=False)
-        if value is None:
-            click.secho(f"{'未设置':<30}", fg="red")
-        else:
-            click.secho(f"{str(value):<30}", fg="yellow")
-    click.secho("-"*50, fg="bright_blue")
+    if aivk_qq_config.get("bot_uid", None) is None or aivk_qq_config.get("root", None) is None:
+        click.secho("⚠️ 受控机器人的QQ号或超级管理员QQ号未设置", fg="bright_red")
+        if click.confirm("是否前往设置？/ 或者你可以稍后执行：aivk-qq config 设置", default=False, abort=False):
+            aivk_qq_config["bot_uid"] = click.prompt("请输入受控机器人的QQ号", type=int)
+            aivk_qq_config["root"] = click.prompt("请输入超级管理员QQ号", type=int)
     
     AivkIO.save_config("qq", aivk_qq_config)
     click.secho("\n✅ 配置已保存", fg="bright_green")
+    
     AivkIO.add_module_id("qq")
 
-    # 创建目录结构
-    click.secho("\n📂 初始化文件系统...", fg="bright_magenta")
-
-    # 检查napcat_root目录是否存在
-    if not napcat_root.exists() or not any(napcat_root.iterdir()):
-        napcat_root.mkdir(parents=True, exist_ok=True)
-        click.secho(f"✅ 创建目录: {napcat_root}", fg="bright_green")
-        from ..napcat.api import NapcatAPI
-        napcat_api = NapcatAPI(aivk_root=aivk_root, bot_uid=bot_uid, root=root, websocket=websocket, websocket_port=websocket_port)
-        click.secho("✅ 创建新配置", fg="bright_green")
+    # 下载Napcat Shell
+    if platform.system() == "Windows" and NapcatInstaller.need_update():
+        NapcatInstaller.download_for_windows(force=force)
     else:
-        from ..napcat.api import NapcatAPI
-        # 如果目录已存在，尝试加载配置或创建新实例
-        try:
-            click.secho("🔄 加载现有配置...", fg="bright_yellow")
-            napcat_api = NapcatAPI.load_from_json(aivk_root=aivk_root)
-            # 更新可能变化的配置
-            napcat_api.bot_uid = bot_uid if bot_uid else aivk_qq_config.get("bot_uid", None)
-            napcat_api.root = root if root else aivk_qq_config.get("root", None)
-            napcat_api.websocket = websocket if websocket else aivk_qq_config.get("websocket", None)
-            napcat_api.websocket_port = websocket_port if websocket_port else aivk_qq_config.get("websocket_port", None)
-            click.secho("✅ 配置已更新", fg="bright_green")
-        
-        except Exception as e:
-            click.secho(f"⚠️ 加载配置失败: {e}", fg="bright_red")
-            click.secho("🔄 创建新配置...", fg="bright_yellow")
-            napcat_api = NapcatAPI(aivk_root=aivk_root, bot_uid=bot_uid, root=root, websocket=websocket, websocket_port=websocket_port)
-            click.secho("✅ 创建新配置成功", fg="bright_green")
+        click.secho("⚠️ 当前操作系统暂不支持自动下载", fg="bright_red")
 
-    click.secho("\n🌐 设置代理...", fg="bright_magenta")
-    napcat_api.set_proxy("https://ghfast.top/")
-    click.secho("✅ 代理已设置为: https://ghfast.top/", fg="bright_green")
-    
-    # 目录为空时下载napcat shell
-    if not any(napcat_root.iterdir()):
-        click.secho("\n📥 正在下载 Napcat.Shell...", fg="bright_magenta", bold=True)
-        try:
-            if platform.system() == "Windows":
-                napcat_api.download_for_win()
-                logger.info(f"Napcat.Shell 已下载到AIVK_ROOT : {napcat_root}")
-                click.secho(f"✅ Napcat.Shell 下载成功！保存位置: {napcat_root}", fg="bright_green", bold=True)
-            elif platform.system() == "Linux":
-                click.secho("⚠️ 自立自强，Linux用户请自行下载", fg="bright_yellow", bold=True)
-                napcat_api.download_for_linux()
-                logger.info(f"Napcat.Shell 已下载到AIVK_ROOT : {napcat_root}")
-            else:
-                click.secho("❌ 不支持的操作系统", fg="bright_red", bold=True)
-                sys.exit(1)
-        except Exception as e:
-            click.secho(f"❌ 下载失败: {e}", fg="bright_red", bold=True)
-            sys.exit(1)
-    else:
-        logger.info(f"Napcat.Shell 已存在于AIVK_ROOT : {napcat_root} , 使用 -f 强制初始化")
-        click.secho(f"ℹ️ Napcat.Shell 已存在于: {napcat_root}", fg="bright_blue")
-        click.secho("💡 提示: 使用 -f 参数可强制重新下载", fg="bright_blue", italic=True)
-    
-    # 保存配置
-    napcat_api.save_to_json()
-    click.secho("\n✅ 配置已保存到磁盘", fg="bright_green")
-    
-    click.echo("\n" + "="*50)
-    click.secho("🎉 初始化完成！", fg="bright_cyan", bold=True)
-    click.echo("="*50 + "\n")
-
-
+    _list_config(aivk_qq_config)
 
 # region update
 @cli.command()
 @click.option("--path", "-p", help="Path to the AIVK ROOT directory")
-@click.option("--pwsh" , "-pw" , is_flag=True , help="更新powershell")
-def update(path , pwsh):
+@click.option("--pwsh", "-pw", is_flag=True, help="更新powershell")
+@click.option("--force", "-f", is_flag=True, help="强制重新下载，即使已是最新版本")
+def update(path, pwsh, force ):
     """
     更新napcat shell
     -p 指定AIVK根目录(可选)
+    -f 强制重新下载，即使已是最新版本
+    --proxy 指定下载代理服务器URL
     """
+    NapcatInstaller.update_proxy_list()
     click.echo("\n" + "="*50)
     click.secho("🔄 AIVK-QQ 更新向导 🔄", fg="bright_cyan", bold=True)
     click.echo("="*50)
 
     _update_path(path)
 
-    # windows and pwsh and 存在winget
+    # 如果需要，更新PowerShell
     if platform.system() == "Windows" and pwsh and shutil.which("winget"):
+        click.secho("🔄 正在更新PowerShell...", fg="bright_magenta")
         from aivk.api import AivkExecuter
-        asyncio.run(AivkExecuter.aexec(cmd=["winget" , "install" , "--id" , "Microsoft.PowerShell" , "--source" , "winget"] , shell=True , env=os.environ))
+        asyncio.run(AivkExecuter.aexec(
+            cmd=["winget", "install", "--id", "Microsoft.PowerShell", "--source", "winget"],
+            shell=True,
+            env=os.environ
+        ))
+        click.secho("✅ PowerShell更新完成", fg="bright_green")
 
-    qq_data_path = AivkIO.get_aivk_root() / "data" / "qq"
-    napcat_root = qq_data_path / "napcat_root"
-
-    from ..napcat.api import NapcatAPI
-
-    click.secho("🔍 检查配置...", fg="bright_blue")
-    try:
-        aivk_root = AivkIO.get_aivk_root()
-        napcat_api = NapcatAPI.load_from_json(aivk_root=aivk_root)
-        click.secho("✅ 配置加载成功", fg="bright_green")
-    except Exception as e:
-        click.secho(f"⚠️ 配置加载失败: {e}", fg="bright_red")
-        click.secho("❌ 更新失败！请先运行 init 命令初始化", fg="bright_red", bold=True)
-        sys.exit(1)
-
-    click.secho("\n📥 正在检查 Napcat.Shell 更新...", fg="bright_magenta", bold=True)
-
-    if napcat_api.need_update:
-        click.secho("🆕 发现新版本，开始更新...", fg="bright_yellow")
+    click.secho("🔍 检查NapCat.Shell版本...", fg="bright_blue")
+    
+    if NapcatInstaller.need_update():
+        click.secho("🔄 需要更新NapCat.Shell...", fg="bright_yellow")
         if platform.system() == "Windows":
-            with click.progressbar(length=100, label="下载进度") as bar:
-                def progress_callback(percent):
-                    bar.update(percent - bar.pos)
-                
-                napcat_api.download_for_win(force=True, progress_callback=progress_callback)
-                
-            logger.info(f"Napcat.Shell 已更新到AIVK_ROOT : {napcat_root}")
-            click.secho(f"✅ Napcat.Shell 更新完成！位置: {napcat_root}", fg="bright_green", bold=True)
-        elif platform.system() == "Linux":
-            click.secho("⚠️ 自立自强，Linux用户请自行下载", fg="bright_yellow", bold=True)
-            napcat_api.download_for_linux()
-            logger.info(f"Napcat.Shell 已更新到AIVK_ROOT : {napcat_root}")
+            NapcatInstaller.download_for_windows(force=force)
         else:
-            click.secho("❌ 不支持的操作系统", fg="bright_red", bold=True)
-            sys.exit(1)
-    else:
-        click.secho("✅ Napcat.Shell 已是最新版本", fg="bright_green", bold=True)
-    
-    # 保存更新后的配置
-    napcat_api.save_to_json()
-    click.secho("\n💾 配置已保存到磁盘", fg="bright_green")
-    
+            
+            click.secho("⚠️ 当前操作系统暂不支持自动下载", fg="bright_red")
+        click.echo("\n" + "="*50)
+        click.secho("🎉 更新完成！", fg="bright_cyan", bold=True)
+        click.echo("="*50 + "\n")
+
+    click.secho("无需更新NapCat.Shell", fg="bright_green")
     click.echo("\n" + "="*50)
-    click.secho("🎉 更新检查完成！", fg="bright_cyan", bold=True)
-    click.echo("="*50 + "\n")
+
 
 
 # region nc(napcat)
@@ -304,7 +216,6 @@ pwsh        正常            正常
 powershell  正常            异常 (☠️)
 
 """
-
 
 @cli.command()
 @click.option("--path", "-p", help="Path to the AIVK ROOT directory")
@@ -329,15 +240,16 @@ def nc(path, qq, shell, title):
     from aivk.api import AivkExecuter
     _update_path(path)
     if shell != "pwsh":
-        click.secho("⚠️ 推荐pwsh ", fg="bright_red")
-        if click.confirm("是否安装pwsh(powershell7)", default=True, abort=False):
-            asyncio.run(AivkExecuter.aexec(cmd=["winget" , "install" , "--id" , "Microsoft.PowerShell" , "--source" , "winget"] , shell=True , env=os.environ))
-            click.secho("✅ pwsh安装完成", fg="bright_green")   
+        click.secho(message="⚠️ 推荐pwsh ", fg="bright_red")
+        if click.confirm(text="是否安装pwsh(powershell7)", default=True, abort=False):
+            asyncio.run(main=AivkExecuter.aexec(cmd=["winget" , "install" , "--id" , "Microsoft.PowerShell" , "--source" , "winget"] , shell=True , env=os.environ))
+            click.secho(message="✅ pwsh安装完成", fg="bright_green")   
             
-    _cmd ="launcher.bat" if not qq else f"launcher.bat {qq}"
-    cmd = _get_cmd(shell_type=shell, title=title ,cwd=str(AivkIO.get_aivk_root() / "data" / "qq" / "napcat_root" / "napcat" ), cmd=_cmd)
+    _cmd ="./launcher.bat" if not qq else f"launcher.bat {qq}"
+    cmd = _get_cmd(shell_type=shell, title=title ,cwd=str(AivkIO.get_aivk_root() / "data" / "qq" / "napcat" ), cmd=_cmd)
 
-    asyncio.run(AivkExecuter.aexec(cmd=cmd, shell=True, env=os.environ, cwd=str(AivkIO.get_aivk_root() / "data" / "qq" / "napcat_root" )))
+    asyncio.run(AivkExecuter.aexec(cmd=cmd, shell=True, env=os.environ, cwd=str(AivkIO.get_aivk_root() / "data" / "qq"  )))
+
 
 
 # region version
@@ -366,6 +278,9 @@ def version(path):
     # AIVK-QQ 版本信息
     click.secho("📦 AIVK-QQ 版本: ", fg="bright_green", nl=False)
     click.secho(f"{__version__}", fg="yellow", bold=True)
+
+    click.secho("📦 AIVK 版本: ", fg="bright_green", nl=False)
+    click.secho(f"{__aivkversion__}", fg="yellow", bold=True)
     
     click.secho("👤 开发作者: ", fg="bright_green", nl=False)
     click.secho(f"{__author__}", fg="magenta")
@@ -476,7 +391,7 @@ def help_cmd(command_name):
     ctx = click.get_current_context()
     
     click.echo("\n" + "="*50)
-    click.secho("💡 AIVK-QQ 命令帮助 💡", fg="bright_blue", bold=True)
+    click.secho("💡 AIVK-QQ 命令帮助 💡", fg="bright蓝", bold=True)
     click.echo("="*50)
     
     if command_name:
@@ -524,116 +439,16 @@ def help_cmd(command_name):
                 commands.append((cmd_name, help_text))
         
         # 显示命令列表
-        click.secho(f"{'命令':<15}{'描述':<35}", fg="bright_blue")
-        click.secho("-"*50, fg="bright_blue")
+        click.secho(f"{'命令':<15}{'描述':<35}", fg="bright蓝")
+        click.secho("-"*50, fg="bright蓝")
         for cmd_name, help_text in commands:
             click.secho(f"{cmd_name:<15}", fg="bright_yellow", nl=False)
             click.secho(f"{help_text:<35}", fg="white")
         
         click.echo("\n" + "-"*50)
-        click.secho("💡 提示: 使用 'aivk-qq help <命令>' 查看特定命令的详细帮助", fg="bright_blue")
+        click.secho("💡 提示: 使用 'aivk-qq help <命令>' 查看特定命令的详细帮助", fg="bright蓝")
         
     click.echo("\n" + "="*50)
-    click.secho("感谢使用 AIVK-QQ！", fg="bright_blue", bold=True)
+    click.secho("感谢使用 AIVK-QQ！", fg="bright蓝", bold=True)
     click.echo("="*50 + "\n")
 
-# region test
-
-@cli.command()
-@click.option("--path", "-p", help="Path to the AIVK ROOT directory")
-@click.option("--host", "-h", default="127.0.0.1", help="WebSocket服务器主机地址")
-@click.option("--port", "-P", default=10143, type=int, help="WebSocket服务器端口")
-@click.option("--timeout", "-t", default=30, type=float, help="连接超时时间(秒)")
-def test_server(path, host, port, timeout):
-    """
-    测试WebSocket服务器连接(正向连接模式)
-    
-    启动一个临时WebSocket服务器，等待客户端连接，测试Napcat是否能主动连接到aivk-qq。
-    """
-    click.echo("\n" + "="*50)
-    click.secho("🧪 测试WebSocket服务器连接 (正向连接模式) 🧪", fg="bright_blue", bold=True)
-    click.echo("="*50)
-    
-    _update_path(path)
-    
-    click.secho("📡 服务器将监听: ", fg="bright_blue", nl=False)
-    click.secho(f"ws://{host}:{port}", fg="bright_yellow", bold=True)
-    click.secho(f"⏱️ 超时时间: {timeout}秒", fg="bright_blue")
-    
-    click.secho("\n⏳ 开始测试...", fg="bright_magenta")
-    
-    from ..napcat.api import NapcatAPI
-    
-    # 运行异步测试函数
-    try:
-        # 直接调用异步测试函数，确保传递所有参数
-        result = asyncio.run(NapcatAPI.test_server_connection(
-            host=host, 
-            port=port, 
-            timeout=timeout
-        ))
-        
-        if result:
-            click.secho("\n✅ 连接测试成功！", fg="bright_green", bold=True)
-            click.secho("客户端已成功连接到服务器", fg="bright_green")
-        else:
-            click.secho("\n❌ 连接测试失败", fg="bright_red", bold=True)
-            click.secho("在超时时间内没有客户端连接到服务器", fg="bright_red")
-            click.secho("\n💡 请检查:", fg="bright_yellow")
-            click.secho("  • Napcat 是否已启动", fg="yellow")
-            click.secho(f"  • Napcat 配置中的 WebSocket 地址和端口是否为 {host}:{port}", fg="yellow")
-            click.secho("  • 防火墙是否允许该端口的连接", fg="yellow")
-    
-    except Exception as e:
-        click.secho(f"\n❌ 测试过程中出错: {str(e)}", fg="bright_red", bold=True)
-    
-    click.echo("\n" + "="*50)
-    click.secho("测试完成", fg="bright_blue", bold=True)
-    click.echo("="*50 + "\n")
-
-@cli.command()
-@click.option("--path", "-p", help="Path to the AIVK ROOT directory")
-@click.option("--uri", "-u", help="WebSocket服务器地址，例如：ws://localhost:10143")
-@click.option("--timeout", "-t", default=40, type=float, help="连接超时时间(秒)")
-def test_client(path, uri, timeout):
-    """
-    测试WebSocket客户端连接(反向连接模式)
-    
-    尝试作为客户端连接到WebSocket服务器，测试aivk-qq是否能主动连接到Napcat。
-    """
-    click.echo("\n" + "="*50)
-    click.secho("🧪 测试WebSocket客户端连接 (反向连接模式) 🧪", fg="bright_blue", bold=True)
-    click.echo("="*50)
-    
-    _update_path(path)
-    
-    
-    from ..napcat.api import NapcatAPI
-    
-    # 运行异步测试函数
-    try:
-        click.secho("\n⏳ 开始测试...", fg="bright_magenta")
-
-        # 直接调用异步测试函数
-        result = asyncio.run(NapcatAPI.test_client_connection(uri=uri, timeout=timeout))
-        
-        if result:
-            click.secho("\n✅ 连接测试成功！", fg="bright_green", bold=True)
-            click.secho("已成功连接到WebSocket服务器", fg="bright_green")
-        else:
-            click.secho("\n❌ 连接测试失败", fg="bright_red", bold=True)
-            click.secho("无法连接到WebSocket服务器", fg="bright_red")
-            click.secho("\n💡 请检查:", fg="bright_yellow")
-            click.secho("  • 服务器是否已启动并正在运行", fg="yellow")
-            click.secho("  • 服务器地址和端口是否正确", fg="yellow")
-            click.secho("  • 服务器是否允许外部连接", fg="yellow")
-            click.secho("  • 网络连接是否正常", fg="yellow")
-    
-    except Exception as e:
-        click.secho(f"\n❌ 测试过程中出错: {str(e)}", fg="bright_red", bold=True)
-    
-    click.echo("\n" + "="*50)
-    click.secho("测试完成", fg="bright_blue", bold=True)
-    click.echo("="*50 + "\n")
-
-# region END

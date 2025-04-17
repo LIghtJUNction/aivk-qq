@@ -1,10 +1,10 @@
-from aivk_qq.base.message import Message, MessageSegment
+from aivk_qq.base.message import Message
 from logging import Logger
 from typing import (
-    Literal, Callable, Self, TypeAlias, TypeVar, cast, Any, 
-    Protocol, TypedDict, Sequence, get_args, get_origin
+    Literal, Callable, Self, TypeAlias, TypeVar, cast, 
+    Protocol, List, TypedDict, Dict, TypeGuard, overload
 )
-from collections.abc import Awaitable, Mapping, Iterable
+from collections.abc import Awaitable, Mapping, Sequence, Iterable
 import json
 import asyncio
 import time
@@ -32,16 +32,21 @@ class MessageSegmentData(TypedDict, total=False):
     text: str
     file: str
     url: str
-    qq: Union[str, int]
-    user_id: Union[str, int]
+    qq: str | int
+    user_id: str | int
     nickname: str
-    content: List["MessageSegmentDict"]
+    content: Sequence["MessageSegmentDict"]  # 修改为协变的Sequence
 
 # 定义更具体的消息段字典类型
 class MessageSegmentDict(TypedDict):
     """消息段字典类型"""
     type: str
     data: MessageSegmentData
+
+# 提供dict和MessageSegmentDict的兼容性类型
+DictLike = Dict[str, object] | MessageSegmentDict
+MessageSegmentSequence = Sequence[DictLike]
+MessageSegmentList = List[MessageSegmentDict]
 
 # 进一步使用更明确的类型别名
 EventDict: TypeAlias = dict[str, object]
@@ -51,7 +56,7 @@ T = TypeVar(name='T')
 # MessageObject协议类型，用于表示可能具有get_segments方法的对象
 class MessageObject(Protocol):
     """定义消息对象协议，用于约束类型检查"""
-    def get_segments(self) -> list[MessageSegmentDict]: ...
+    def get_segments(self) -> MessageSegmentList: ...
     def text(self, content: str) -> "MessageObject": ...
     def extract_plain_text(self) -> str: ...
     def __iter__(self) -> Iterable[MessageSegmentDict]: ...
@@ -60,16 +65,31 @@ class MessageObject(Protocol):
 class SegmentBuilder(Protocol):
     """定义消息段构建器协议，用于约束类型检查"""
     @staticmethod
-    def node_custom(user_id: int, nickname: str, content: list[MessageSegmentDict]) -> MessageSegmentDict: ...
+    def node_custom(user_id: int, nickname: str, content: MessageSegmentSequence) -> MessageSegmentDict: ...
+
+# 类型检查辅助函数
+def is_dict_type(obj: object) -> TypeGuard[dict]:
+    """检查对象是否为字典类型"""
+    return isinstance(obj, dict)
 
 # 添加类型安全的辅助函数
-def safe_get_from_dict(data: dict[str, object] | None, key: str, default: object = None) -> object:
+def safe_get_from_dict(data: Any, key: str, default: Any = None) -> Any:
     """从字典中安全获取值"""
     if data is None or not isinstance(data, dict):
         return default
     return data.get(key, default)
 
-def safe_cast_message_segments(message: Union[str, Message, list[MessageSegmentDict]]) -> list[MessageSegmentDict]:
+def is_message_segment_dict(obj: Any) -> TypeGuard[MessageSegmentDict]:
+    """检查对象是否符合MessageSegmentDict结构"""
+    return (
+        isinstance(obj, dict) and
+        "type" in obj and
+        isinstance(obj.get("type"), str) and
+        "data" in obj and
+        isinstance(obj.get("data"), dict)
+    )
+
+def safe_cast_message_segments(message: Union[str, Message, Sequence[DictLike]]) -> MessageSegmentList:
     """安全地将不同类型的消息转换为消息段列表"""
     if isinstance(message, Message):
         # 使用安全方法获取Message对象的segments
@@ -88,8 +108,24 @@ def safe_cast_message_segments(message: Union[str, Message, list[MessageSegmentD
             logger.warning("Message对象没有text或get_segments方法")
             return [{"type": "text", "data": {"text": message}}]
     else:
-        # 已经是消息段列表
-        return message
+        # 已经是消息段列表，但需要确保类型正确
+        result: MessageSegmentList = []
+        for segment in message:
+            if is_message_segment_dict(segment):
+                result.append(segment)
+            elif isinstance(segment, dict):
+                # 尝试转换为MessageSegmentDict
+                if "type" in segment and isinstance(segment.get("data"), dict):
+                    segment_data = MessageSegmentData(**segment.get("data", {}))
+                    result.append({
+                        "type": segment["type"],
+                        "data": segment_data
+                    })
+                else:
+                    # 创建简单的文本消息段
+                    text = str(segment.get("text", str(segment)))
+                    result.append({"type": "text", "data": {"text": text}})
+        return result
 
 # 事件处理器类型
 EventHandler: TypeAlias = Callable[[EventDict], Awaitable[None]]
@@ -1435,6 +1471,7 @@ class NapcatClient(BaseModel):
                 if isinstance(user_id_obj, (str, int)):
                     try:
                         return int(user_id_obj)
+                        return int(user_id_obj)
                     except (ValueError, TypeError):
                         logger.warning(f"无法将QQ号转换为整数: {user_id_obj}")
                         return None
@@ -1451,4 +1488,28 @@ class NapcatClient(BaseModel):
         """
         self._default_self_id = user_id
         logger.info(f"已设置默认QQ号: {user_id}")
+
+    # 处理get_segments方法的安全调用
+    def _safe_get_segments(self, msg_obj: Any) -> MessageSegmentList:
+        """安全地获取消息段列表，处理可能不存在的get_segments方法"""
+        if hasattr(msg_obj, "get_segments") and callable(getattr(msg_obj, "get_segments")):
+            try:
+                segments = msg_obj.get_segments()
+                # 确保返回类型正确
+                return [dict(segment) for segment in segments] if segments else []
+            except Exception as e:
+                logger.warning(f"调用get_segments方法失败: {e}")
+                return []
+        elif isinstance(msg_obj, list):
+            # 已经是列表形式
+            return [dict(segment) for segment in msg_obj if isinstance(segment, dict)]
+        elif isinstance(msg_obj, dict):
+            # 单个消息段
+            return [dict(msg_obj)]
+        elif isinstance(msg_obj, str):
+            # 纯文本消息
+            return [{"type": "text", "data": {"text": msg_obj}}]
+        else:
+            # 其他类型，尝试转为字符串
+            return [{"type": "text", "data": {"text": str(msg_obj)}}]
 
