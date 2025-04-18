@@ -27,13 +27,13 @@
 首先安装 uv 包管理器（如果尚未安装）：
 
 ```bash
-pip install uv
+uv pip install uv
 ```
 
 然后安装项目依赖：
 
 ```bash
-uv tool install aivk_qq
+uv pip install aivk_qq
 uv pip install -r requirements.txt
 ```
 
@@ -46,7 +46,7 @@ uv tool install aivk
 aivk init # 留空或目录
 
 aivk-qq init 
-aivk-qq config -b 受控机器人qq -r 超级管理qq -w 127.0.0.1 -wp 10143 # ws_client ip:port
+aivk-qq config -b <机器人QQ号> -r <管理员QQ号> -w 127.0.0.1 -wp 10143 # ws_client ip:port
 
 aivk-qq nc # 启动Napcat.Shell --shell powershell / pwsh / cmd
 
@@ -98,7 +98,7 @@ aivk-qq mcp
 ### SSE传输模式启动
 
 ```bash
-aivk-qq mcp --transport sse --port 10141 --host 127.0.0.1
+aivk-qq mcp --transport sse --port 10143 --host 127.0.0.1
 ```
 
 启动后，可通过以下地址访问SSE服务：
@@ -110,9 +110,9 @@ http://localhost:10141/sse/
 
 启动Napcat.Shell实现QQ客户端功能增强：
 
-```bash
-aivk-qq nc
-```
+   ```bash
+   aivk-qq init --path /path/to/aivk/root/
+   ```
 
 支持以下选项：
 - `-p, --path` - 指定AIVK根目录（可选）

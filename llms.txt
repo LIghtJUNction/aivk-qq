@@ -1,0 +1,18 @@
+# AIVK-QQ 项目指南
+
+> 在开始编码前请阅读此文档
+
+这是AIVK GitHub仓库的项目指南文档。
+
+## 环境信息
+
+- [Python版本]: 3.13
+- 包管理: uv项目
+- 代码风格: PEP8
+
+## 注意事项
+
+- 请不要编写您不确定的代码
+
+## 参考资料
+- mcp服务器：https://modelcontextprotocol.io/llms-full.txt

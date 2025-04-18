@@ -20,6 +20,13 @@ dependencies = [
 [project.scripts]
 aivk-qq = "aivk_qq.cli:cli"
 
+[project.optional-dependencies]
+dev = [
+    "pyupgrade>=3.19.1",
+]
+
+
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
@@ -27,8 +34,4 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "pytest>=8.3.5",
-    "pytest-asyncio>=0.20.3",
 ]
-
-[tool.pytest.ini_options]
-asyncio_mode = "strict"

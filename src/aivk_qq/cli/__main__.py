@@ -1,5 +1,4 @@
 # pyright: reportArgumentType=false,reportPrivateUsage=false,reportUnknownVariableType=false,reportUnknownParameterType=false,reportUnknownMemberType=false,reportMissingParameterType=false,reportUnusedCallResult=false
-# -*- coding: utf-8 -*-
 import asyncio
 import os
 from pathlib import Path
@@ -268,7 +267,7 @@ def version(path):
     dotVersion = AivkIO.get_aivk_root() / "data" / "qq" / "napcat_root" / ".version"
 
     if dotVersion.exists():
-        with open(dotVersion, "r") as f:
+        with open(dotVersion) as f:
             version = f.read().strip()
             click.secho("🤖 Napcat.Shell 版本: ", fg="bright_green", nl=False)
             click.secho(f"{version}", fg="yellow", bold=True)
