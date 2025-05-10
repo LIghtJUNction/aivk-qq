@@ -9,7 +9,7 @@
 
 **aivk-qq 是pypi包 / uv project / aivk module / mcp server / cli tool /Napcat launcher
 **集成MCP服务器、CLI工具、Napcat.Shell启动器和Napcat API SDK于一体**
-
+Napcat python SDK 已分离为独立项目
 </div>
 
 ## ✨ 特性
